@@ -178,6 +178,8 @@ class DataLoaderLite:
 # ---------------------------------------------------------------------------------------
 # Train script
 
+import time
+
 device = "cpu"
 if torch.cuda.is_available():
     device = "cuda"
@@ -189,18 +191,22 @@ torch.manual_seed(42)
 if torch.cuda.is_available():
     torch.cuda.manual_seed(42)
 
-train_loader = DataLoaderLite(B=4, T=32)
+train_loader = DataLoaderLite(B=16, T=32)
 
 model = GPT(GPTConfig()).to(device)
 optim = torch.optim.AdamW(model.parameters(), lr = 3e-4)
 for i in range(50):
+    t0 = time.time()
     x, y = train_loader.next_batch()
     x, y = x.to(device), y.to(device)
     optim.zero_grad()
     logits, loss = model(x, y)
     loss.backward()
     optim.step()
-    print(f"step {i}: loss: {loss.item()}")
+    torch.cuda.synchronize()
+    t1 = time.time()
+    dt = (t1 - t0)*1000
+    print(f"step {i}: loss: {loss.item()}, dt: {dt:.2f}ms")
 
 import sys; sys.exit(0)
 
