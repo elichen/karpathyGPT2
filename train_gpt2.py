@@ -214,12 +214,12 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed(1337)
 
 total_batch_size = 524288
-B = 4
+B = 8
 T = 1024
 assert total_batch_size % (B * T) == 0, "make sure total_batch_size is divisible by B x T"
 grad_accum_steps = total_batch_size // (B * T)
-print("total desired batch size: {total_batch_size}")
-print("=> calculated gradient accumulation steps: {grad_accum_steps}")      
+print(f"total desired batch size: {total_batch_size}")
+print(f"=> calculated gradient accumulation steps: {grad_accum_steps}")      
 
 train_loader = DataLoaderLite(B=B, T=T)
 
