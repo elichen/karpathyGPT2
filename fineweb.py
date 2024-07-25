@@ -11,7 +11,7 @@ import os
 import multiprocessing as mp
 import numpy as np
 import tiktoken
-from datasets import load_dataset # pip install datasets
+from datasets import load_dataset,config # pip install datasets
 from tqdm import tqdm # pip install tqdm
 
 # ------------------------------------------
@@ -22,6 +22,12 @@ shard_size = int(1e8) # 100M tokens per shard, total of 100 shards
 # create the cache the local directory if it doesn't exist yet
 DATA_CACHE_DIR = os.path.join(os.path.dirname(__file__), local_dir)
 os.makedirs(DATA_CACHE_DIR, exist_ok=True)
+
+HF_CACHE_DIR = os.path.join(os.path.dirname(__file__), "huggingface")
+os.makedirs(os.path.join(HF_CACHE_DIR, "datasets"), exist_ok=True)
+config.HF_DATASETS_CACHE = os.path.join(HF_CACHE_DIR, "datasets")
+os.makedirs(os.path.join(HF_CACHE_DIR, "downloads"), exist_ok=True)
+config.DOWNLOADED_DATASETS_PATH = os.path.join(HF_CACHE_DIR, "downloads")
 
 # download the dataset
 fw = load_dataset("HuggingFaceFW/fineweb-edu", name=remote_name, split="train")
