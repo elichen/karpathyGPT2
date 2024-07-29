@@ -192,7 +192,9 @@ class DataLoaderLite:
         self.T = T
         self.process_rank = process_rank
         self.num_processes = num_processes
+        self.split = split
         assert split in {'train', 'val'}
+        self.rng = np.random.default_rng(1337)
 
         data_root = "edu_fineweb10B"
         shards = os.listdir(data_root)
@@ -205,9 +207,20 @@ class DataLoaderLite:
             print(f"found {len(shards)} shards for split {split}")
         self.reset()
 
+    def load_shard(self, filename):
+        shard = load_tokens(filename)
+        if self.split == "train":
+            eot_positions = (torch.where(shard == enc.eot_token)[0] + 1).tolist()
+            documents = [shard[start:end] for start, end in zip([0] + eot_positions[:-1], eot_positions)]
+            self.rng.shuffle(documents)
+            shard = torch.cat(documents)
+        return shard
+    
     def reset(self):
         self.current_shard = 0
-        self.tokens = load_tokens(self.shards[self.current_shard])
+        if self.split == "train":
+            self.rng.shuffle(self.shards)
+        self.tokens = self.load_shard(self.shards[self.current_shard])
         self.current_position = self.B * self.T * self.process_rank
         
     def next_batch(self):
@@ -217,9 +230,12 @@ class DataLoaderLite:
         y = (buf[1:]).view(B, T)
         self.current_position += B * T * self.num_processes
         if self.current_position + (B * T * self.num_processes + 1) > len(self.tokens):
-            self.current_shard = (self.current_shard + 1) % len(self.shards)
-            self.tokens = load_tokens(self.shards[self.current_shard])
-            self.current_position = B * T * self.process_rank
+            self.current_shard += 1
+            if self.current_shard == len(self.shards):
+                self.reset()
+            else:
+                self.tokens = self.load_shard(self.shards[self.current_shard])
+                self.current_position = B * T * self.process_rank
         return x, y
 
 # ---------------------------------------------------------------------------------------
