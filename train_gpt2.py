@@ -271,9 +271,8 @@ torch.set_float32_matmul_precision("high")
 
 model = GPT(GPTConfig(vocab_size=50304))
 model.to(device)
-use_compile = False
-if use_compile:
-    model = torch.compile(model)
+model = torch.compile(model)
+torch._dynamo.config.optimize_ddp = False
 if ddp:
     model = DDP(model, device_ids=[ddp_local_rank])
 raw_model = model.module if ddp else model
@@ -334,7 +333,7 @@ for step in range(max_steps):
                 }
                 torch.save(checkpoint, checkpoint_path)
 
-    if (step % val_steps == 0 or last_step) and (not use_compile):
+    if step % val_steps == 0 or last_step:
         num_correct_norm = 0
         num_total = 0
         for i, example in enumerate(iterate_examples("val")):
@@ -362,7 +361,7 @@ for step in range(max_steps):
             with open(log_file, 'a') as f:
                 f.write(f"{step} hella {acc_norm:.4f}\n")
     
-    if ((step > 0 and step % val_steps == 0) or last_step) and (not use_compile):
+    if (step > 0 and step % val_steps == 0) or last_step:
         model.eval()
         num_return_sequences = 4
         max_length = 32
